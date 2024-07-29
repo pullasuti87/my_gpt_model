@@ -1,3 +1,3 @@
 # my_chatgpt
 
-- under construction...
+- under construction
