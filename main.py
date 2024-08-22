@@ -52,6 +52,16 @@ def decode_ints(ints):
 # print(int_to_str)
 
 tensor_data = torch.tensor(encode_chars(dataset))
-print(tensor_data)
+# print(tensor_data)
 print(tensor_data.shape)
-print(tensor_data[:500])
+# print(tensor_data[:500])
+
+# training
+percent = int(0.85 * len(tensor_data))
+training_data = tensor_data[:percent]
+
+# validation data
+val_data = tensor_data[percent:]
+
+print("training", training_data.shape)
+print("val", val_data.shape)
