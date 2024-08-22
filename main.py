@@ -1,5 +1,5 @@
-# pytorch more familiar, haven't been using tensorflow
-# import torch
+# check tensorflow
+import torch
 
 
 data = open("dataset.txt", "r")
@@ -12,9 +12,7 @@ chars = sorted(set(dataset))
 
 # TOKENIZATION
 
-# str to int
 str_to_int = {}
-# int to str
 int_to_str = {}
 for i, c in enumerate(chars):
     str_to_int[c] = i
@@ -35,12 +33,25 @@ def decode_ints(ints):
     return s
 
 
-s = "my name is slim Shady"
-print(s)
-test = encode_chars(s)
-print(test)
-
-print(decode_ints(test))
+# s = "my name is slim Shady"
+# print(s)
+# test = encode_chars(s)
+# print(test)
+#
+# print(decode_ints(test))
+#
+#
+# s2 = "sauna"
+# print(s2)
+# test2 = encode_chars(s2)
+# print(test2)
+#
+# print(decode_ints(test2))
 
 # print(str_to_int, end="\n\n")
 # print(int_to_str)
+
+tensor_data = torch.tensor(encode_chars(dataset))
+print(tensor_data)
+print(tensor_data.shape)
+print(tensor_data[:500])
