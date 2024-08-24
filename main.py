@@ -11,6 +11,8 @@ chars = sorted(set(dataset))
 # print(chars)
 
 # TOKENIZATION
+# simple char to int tokenization
+# others to try sentencepiece, tiktoken
 
 str_to_int = {}
 int_to_str = {}
@@ -53,7 +55,7 @@ def decode_ints(ints):
 
 tensor_data = torch.tensor(encode_chars(dataset))
 # print(tensor_data)
-print(tensor_data.shape)
+# print(tensor_data.shape)
 # print(tensor_data[:500])
 
 # training
@@ -63,5 +65,16 @@ training_data = tensor_data[:percent]
 # validation data
 val_data = tensor_data[percent:]
 
-print("training", training_data.shape)
-print("val", val_data.shape)
+# print("training", training_data.shape)
+# print("val", val_data.shape)
+
+segment_size = 10
+
+print(training_data[: segment_size + 1])
+
+i = training_data[:segment_size]
+j = training_data[1 : segment_size + 1]
+for t in range(segment_size):
+    context = i[: t + 1]
+    target = j[t]
+    print("input:", context, "target:", target)
