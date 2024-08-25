@@ -70,11 +70,14 @@ val_data = tensor_data[percent:]
 
 segment_size = 10
 
-print(training_data[: segment_size + 1])
+# print(training_data[: segment_size + 1])
 
-i = training_data[:segment_size]
-j = training_data[1 : segment_size + 1]
-for t in range(segment_size):
-    context = i[: t + 1]
-    target = j[t]
-    print("input:", context, "target:", target)
+for t in range(1, segment_size + 1):
+
+    sequence = training_data[:t]
+    prediction = training_data[t]
+
+    print("sequence:", sequence, "prediction:", prediction)
+
+# make sure that random number stays same
+torch.manual.seed(1987)
