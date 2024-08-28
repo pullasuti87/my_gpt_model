@@ -61,7 +61,7 @@ def decode_ints(ints):
 
 
 """ trying tiktoken instead """
-enc = tiktoken.get_encoding("o200k_base")
+enc = tiktoken.get_encoding("cl100k_base")
 tensor_data = torch.tensor(enc.encode(dataset))
 
 # training
@@ -84,11 +84,33 @@ for t in range(1, segment_size + 1):
     sequence = training_data[:t]
     prediction = training_data[t]
 
-    print("sequence:", sequence, "prediction:", prediction)
+#    print("sequence:", sequence, "prediction:", prediction)
 
 # make sure that random number stays same
 torch.manual_seed(1987)
 
 
-def get_groups():
-    {}
+# using to make random_numbers torch.randint(low, high, size)
+# SIZE needs to be tuble
+def get_groups(data):
+    # make sure there is enough tokens
+    groups = torch.randint(len(data) - group_size, (group_size,))
+
+    input_seq = []
+    for i in groups:
+        # slice operation
+        input_seq.append(data[i : i + segment_size])
+    input_group = torch.stack(input_seq)
+
+    target_seq = []
+    for i in groups:
+        # slice operation
+        target_seq.append(data[i + 1 : i + segment_size + 1])
+    target_group = torch.stack(target_seq)
+
+    print(input_group, "\n")
+    print(target_group)
+    return input_group, target_group
+
+
+get_groups(training_data)
