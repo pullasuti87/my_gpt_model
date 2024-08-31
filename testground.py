@@ -79,12 +79,16 @@ group_size = 5
 
 # print(training_data[: segment_size + 1])
 
-for t in range(1, segment_size + 1):
 
-    sequence = training_data[:t]
-    prediction = training_data[t]
+def print_sequences():
+    print("\n")
+    for t in range(1, segment_size + 1):
 
-#    print("sequence:", sequence, "prediction:", prediction)
+        sequence = training_data[:t]
+        prediction = training_data[t]
+
+        print("sequence:", sequence, "prediction:", prediction)
+
 
 # make sure that random number stays same
 torch.manual_seed(1987)
@@ -102,15 +106,21 @@ def get_groups(data):
         input_seq.append(data[i : i + segment_size])
     input_group = torch.stack(input_seq)
 
-    target_seq = []
+    prediction_seq = []
     for i in groups:
         # slice operation
-        target_seq.append(data[i + 1 : i + segment_size + 1])
-    target_group = torch.stack(target_seq)
+        prediction_seq.append(data[i + 1 : i + segment_size + 1])
+    prediction_group = torch.stack(prediction_seq)
 
-    print(input_group, "\n")
-    print(target_group)
-    return input_group, target_group
+    print("\n")
+    print("input:", input_group, "\n")
+    print("prediction:", prediction_seq, "\n")
+    return input_group, prediction_group
 
 
+print_sequences()
 get_groups(training_data)
+
+
+class SimpleBigramModel(torch.nn.Module):
+    pass
