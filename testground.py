@@ -122,5 +122,15 @@ print_sequences()
 get_groups(training_data)
 
 
-class SimpleBigramModel(torch.nn.Module):
-    pass
+# bigram relationships, nn.Module -> base class for neural network module
+class BigramModel(torch.nn.Module):
+    def __init__(self, unique_token_size):
+        super().__init__()
+        # maps tokens their vector numbers -> reads next token from table
+        self.token_table = torch.nn.Embedding(unique_token_size, unique_token_size)
+        print(self.token_table)
+
+
+print(len(chars))
+unique_token_size = len(chars)
+BigramModel(unique_token_size)
