@@ -74,8 +74,8 @@ val_data = tensor_data[percent:]
 # print("training", training_data.shape)
 # print("val", val_data.shape)
 
-segment_size = 10
-group_size = 5
+segment_size = 4
+group_size = 8
 
 # print(training_data[: segment_size + 1])
 
@@ -97,40 +97,53 @@ torch.manual_seed(1987)
 # using to make random_numbers torch.randint(low, high, size)
 # SIZE needs to be tuble
 def get_groups(data):
-    # make sure there is enough tokens
-    groups = torch.randint(len(data) - group_size, (group_size,))
+    # check enough tokens
+    groups = torch.randint(len(data) - group_size, (segment_size,))
 
     input_seq = []
     for i in groups:
-        # slice operation
-        input_seq.append(data[i : i + segment_size])
+        input_seq.append(data[i : i + group_size])
     input_group = torch.stack(input_seq)
 
     prediction_seq = []
     for i in groups:
-        # slice operation
-        prediction_seq.append(data[i + 1 : i + segment_size + 1])
+        prediction_seq.append(data[i + 1 : i + group_size+ 1])
     prediction_group = torch.stack(prediction_seq)
 
-    print("\n")
-    print("input:", input_group, "\n")
-    print("prediction:", prediction_seq, "\n")
+    #  print("\n")
+    #  print("input:", input_group, "\n")
+    #  print("prediction:", prediction_seq, "\n")
     return input_group, prediction_group
 
 
-print_sequences()
-get_groups(training_data)
+# print_sequences()
+x_input, y_prediction = get_groups(training_data)
+print(x_input.shape)
+print(y_prediction.shape)
 
 
 # bigram relationships, nn.Module -> base class for neural network module
 class BigramModel(torch.nn.Module):
-    def __init__(self, unique_token_size):
+    def __init__(self, unique_token_size, embed_size=32):
         super().__init__()
         # maps tokens their vector numbers -> reads next token from table
-        self.token_table = torch.nn.Embedding(unique_token_size, unique_token_size)
-        print(self.token_table)
+        self.token_table = torch.nn.Embedding(unique_token_size, embed_size)
+        # takes embedding size and projects it to uniqu token size
+        # fix memory error
+        self.output = torch.nn.Linear(embed_size, unique_token_size)
+
+    def forward(self, input_seq):
+        # raw predictions from embedding table
+        embeds = self.token_table(input_seq)
+        raw_predictions = self.output(embeds)
+
+        return raw_predictions
 
 
-print(len(chars))
-unique_token_size = len(chars)
-BigramModel(unique_token_size)
+# print(len(chars))
+# get unique size from tiktoken
+unique_token_size = enc.n_vocab
+model = BigramModel(unique_token_size)
+model_output = model(x_input)
+print(model_output)
+print(model_output.shape)
