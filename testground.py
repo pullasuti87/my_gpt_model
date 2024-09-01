@@ -107,7 +107,7 @@ def get_groups(data):
 
     prediction_seq = []
     for i in groups:
-        prediction_seq.append(data[i + 1 : i + group_size+ 1])
+        prediction_seq.append(data[i + 1 : i + group_size + 1])
     prediction_group = torch.stack(prediction_seq)
 
     #  print("\n")
@@ -130,7 +130,6 @@ class BigramModel(torch.nn.Module):
         self.token_table = torch.nn.Embedding(unique_token_size, embed_size)
         # takes embedding size and projects it to uniqu token size
         # fix memory error
-        self.output = torch.nn.Linear(embed_size, unique_token_size)
 
     def forward(self, input_seq):
         # raw predictions from embedding table
