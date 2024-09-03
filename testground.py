@@ -1,6 +1,7 @@
 # check tensorflow
 import torch
 import tiktoken
+import math
 
 data = open("dataset.txt", "r")
 dataset = data.read()
@@ -64,6 +65,13 @@ def decode_ints(ints):
 enc = tiktoken.get_encoding("cl100k_base")
 tensor_data = torch.tensor(enc.encode(dataset))
 
+# test
+s = "jeejee"
+encode = enc.encode(s)
+decode = enc.decode(encode)
+assert s == decode, "tiktoken fail"
+
+
 # training
 percent = int(0.85 * len(tensor_data))
 training_data = tensor_data[:percent]
@@ -118,8 +126,8 @@ def get_groups(data):
 
 # print_sequences()
 x_input, y_prediction = get_groups(training_data)
-print(x_input.shape)
-print(y_prediction.shape)
+# print(x_input.shape)
+# print(y_prediction.shape)
 
 
 # bigram relationships, nn.Module -> base class for neural network module
@@ -132,18 +140,42 @@ class BigramModel(torch.nn.Module):
         # fix memory error
         self.output = torch.nn.Linear(embed_size, unique_token_size)
 
-    def forward(self, input_seq):
+    def forward(self, input_seq, predictions=None):
+        """creates creates predictions"""
         # raw predictions from embedding table
         embeds = self.token_table(input_seq)
         raw_predictions = self.output(embeds)
 
-        return raw_predictions
+        if predictions is None:
+            loss = None
+        else:
+            # (seg_size, seq_size, unique_size) -> seqment_size, group_size, unique_token_size
+            seg_size, seq_size, unique_size = raw_predictions.shape
+            raw_predictions = raw_predictions.view(seg_size * seq_size, unique_size)
+            prediction_target = predictions.view(seg_size * seq_size)
+            loss = torch.nn.functional.cross_entropy(raw_predictions, prediction_target)
+
+        return raw_predictions, loss
+
+    def generate(self, input_seq, new_tokens):
+        """creates new sequences of text"""
+        for _ in range(new_tokens):
+            predictions, loss = self.forward(input_seq)
+            # SOMETHING SOMETHING
+
+            return predictions
 
 
 # print(len(chars))
 # get unique size from tiktoken
 unique_token_size = enc.n_vocab
 model = BigramModel(unique_token_size)
-model_output = model(x_input)
-print(model_output)
+model_output, loss = model(x_input, y_prediction)
+# print(model_output)
 print(model_output.shape)
+# calculate loss should be −ln (1÷100277) -> 11.515691636
+value = 1 / 100277
+value = math.log(value)
+expected_loss = -value
+print("expected loss:", expected_loss)
+print(loss)
