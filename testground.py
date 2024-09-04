@@ -160,10 +160,18 @@ class BigramModel(torch.nn.Module):
     def generate(self, input_seq, new_tokens):
         """creates new sequences of text"""
         for _ in range(new_tokens):
+            # loss is not needed
             predictions, loss = self.forward(input_seq)
-            # SOMETHING SOMETHING
+            # focus last token
+            predictions = predictions[:, -1, :]
+            # softmax  gives probability distribution over next tokens
+            probabilities = torch.nn.functional.softmax(predictions, dim=-1)
+            # sample next token
+            next_input_seq = torch.multinomial(probabilities, num_samples=1)
+            # extends sequence by one token
+            input_seq = torch.cat((input_seq, next_input_seq), dim=-1)
 
-            return predictions
+        return input_seq
 
 
 # print(len(chars))
@@ -179,3 +187,10 @@ value = math.log(value)
 expected_loss = -value
 print("expected loss:", expected_loss)
 print(loss)
+
+initial_input_seq = torch.zeros((1, 1), dtype=torch.long)
+generated_seq = model.generate(initial_input_seq, new_tokens=100)[0].tolist()
+decoded_text = enc.decode(generated_seq)
+# not sure if it should be like this
+# seems pretty weird
+print(decoded_text)
