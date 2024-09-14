@@ -192,5 +192,6 @@ initial_input_seq = torch.zeros((1, 1), dtype=torch.long)
 generated_seq = model.generate(initial_input_seq, new_tokens=100)[0].tolist()
 decoded_text = enc.decode(generated_seq)
 # not sure if it should be like this
-# seems pretty weird
+# seems pretty weird, probably because using tiktoken -> english, latin script
+# languages
 print(decoded_text)
