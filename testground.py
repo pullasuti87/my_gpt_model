@@ -110,12 +110,12 @@ def get_groups(data):
 
     input_seq = []
     for i in groups:
-        input_seq.append(data[i : i + group_size])
+        input_seq.append(data[i: i + group_size])
     input_group = torch.stack(input_seq)
 
     prediction_seq = []
     for i in groups:
-        prediction_seq.append(data[i + 1 : i + group_size + 1])
+        prediction_seq.append(data[i + 1: i + group_size + 1])
     prediction_group = torch.stack(prediction_seq)
 
     #  print("\n")
@@ -151,9 +151,11 @@ class BigramModel(torch.nn.Module):
         else:
             # (seg_size, seq_size, unique_size) -> seqment_size, group_size, unique_token_size
             seg_size, seq_size, unique_size = raw_predictions.shape
-            raw_predictions = raw_predictions.view(seg_size * seq_size, unique_size)
+            raw_predictions = raw_predictions.view(
+                seg_size * seq_size, unique_size)
             prediction_target = predictions.view(seg_size * seq_size)
-            loss = torch.nn.functional.cross_entropy(raw_predictions, prediction_target)
+            loss = torch.nn.functional.cross_entropy(
+                raw_predictions, prediction_target)
 
         return raw_predictions, loss
 
@@ -186,7 +188,7 @@ value = 1 / 100277
 value = math.log(value)
 expected_loss = -value
 print("expected loss:", expected_loss)
-print(loss)
+print(loss, "\n")
 
 initial_input_seq = torch.zeros((1, 1), dtype=torch.long)
 generated_seq = model.generate(initial_input_seq, new_tokens=100)[0].tolist()
@@ -195,3 +197,26 @@ decoded_text = enc.decode(generated_seq)
 # seems pretty weird, probably because using tiktoken -> english, latin script
 # languages
 print(decoded_text)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
