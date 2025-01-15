@@ -197,26 +197,3 @@ decoded_text = enc.decode(generated_seq)
 # seems pretty weird, probably because using tiktoken -> english, latin script
 # languages
 print(decoded_text)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
