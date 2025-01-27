@@ -1,5 +1,9 @@
 # my_chatgpt (simple transformerLM)
 
+my attempt to understand language models a little better,
+relies heavily on the _Building Transformer Models with Attention_ book
+and Andrej Karpathy's transformer implementations
+
 - self-attention
 - multi-head attention
 - position embeddings

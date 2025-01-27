@@ -20,7 +20,7 @@ device = "cpu"  # cuda
 torch.manual_seed(1701)
 
 
-text = open("dataset.txt", "r", encoding="utf-8")
+text = open("data.txt", "r", encoding="utf-8")
 dataset = text.read()
 
 # used by openai:
@@ -95,10 +95,60 @@ def loss():
             losses[i] = loss.item()
 
         results[ds] = losses.mean()
-    # dropo.., normal.. on
+    # normalization on
     model.train()
 
     return results
+
+
+class Head(nn.Module):
+    """single self-attention head with causal masking"""
+
+    def __init__(self, size):
+        super().__init__()
+        # projections
+        self.key = nn.Linear(n_embd, size, bias=False)
+        self.query = nn.Linear(n_embd, size, bias=False)
+        self.value = nn.Linear(n_embd, size, bias=False)
+
+        # prevent peeking
+        self.register_buffer(
+            "causal_mask", torch.tril(torch.ones(context_length, context_length))
+        )
+
+        # prevent overfitting
+        self.dropout = nn.Dropout(dropout)
+
+    def process(self, x):
+        """process input
+
+        Args:
+            x (tensor): (B, T, C)
+
+        Returns:
+            tensor: tensor (B, T, head_size)
+        """
+        B, T, C = x.shape
+
+        k = self.key(x)
+        q = self.query(x)
+
+        # attention scores (dot product scaled by sqrt(dim))
+        scores = q @ k.transpose(-2, -1) * (C**-0.5)  # (B, T, T)
+
+        # apply  masking
+        mask = self.mask[:T, :T]
+        scores = scores.masked_fill(mask == 0, float("-inf"))
+
+        # probabilities and apply dropout
+        weights = F.softmax(scores, dim=-1)  # (B, T, T)
+        weights = self.dropout(weights)
+
+        # weighted values
+        v = self.value(x)  # (B, T, head_size)
+        output = weights @ v  # (B, T, head_size)
+
+        return output
 
 
 def main():
