@@ -7,148 +7,120 @@ import tiktoken
 # import sentencepiece as sp
 
 # configuration
-sequences_per_batch = 32  # sequences processed in parallel
-context_length = 64  # max length of predictions
+batch_size = 4  # seq processed in parallel
+context_length = 8  # max length of predictions
 max_training_steps = 5000
-evaluation_frequence = 500
-evaluation_steps = 100
-learning_rate = 3e-4  # adam optimizer
-device = "cpu"  # cuda
-# might need more, not sure
+evaluation_frequency = 500
+evaluation_iterations = 100  # iterations for evaluation metrics
+learning_rate = 3e-4  # Adam optimizer
+device = "cpu"  # "cuda" if available
 
-# registry number of known starship
+# hyperparameters
+embedding_dimension = 128  # dimensionality of token embeddings
+n_attention_heads = 8  # n of attention heads
+n_transformer_layers = 6  # n of layers
+dropout_rate = 0.1  # rate for regularization -> 0.0 no dropout
+
+# registery number of specific starship
 torch.manual_seed(1701)
 
-
-text = open("data.txt", "r", encoding="utf-8")
-dataset = text.read()
+with open("data.txt", "r", encoding="utf-8") as file:
+    dataset = file.read()
 
 # used by openai:
 # gpt-4-turbo, gpt-4, gpt-3.5-turbo, text-embedding-ada-002,
 # text-embedding-3-small, text-embedding-3-large
 enc = tiktoken.get_encoding("cl100k_base")
-s = "test"
-encode = enc.encode(s)
-decode = enc.decode(encode)
-assert s == decode, "tiktoken fail"
 
+test_string = "test"
+encoded = enc.encode(test_string)
+decoded = enc.decode(encoded)
+assert test_string == decoded, "tokenizer test failed"
+
+# dataset to tensor
 tensor_data = torch.tensor(enc.encode(dataset))
-# tensor([  937,   964, 84839,  ..., 14200, 26577,   382])
 
 # 80% training, 20% validation
-point = int(0.8 * len(tensor_data))
-# datasets
-training_ds = tensor_data[:point]
-validation_ds = tensor_data[point:]
+split = int(0.8 * len(tensor_data))
+train_data = tensor_data[:split]
+val_data = tensor_data[split:]
 
 
-def training_batch(ds):
-    if ds == "train":
-        current_ds = training_ds
-    else:
-        current_ds = validation_ds
+def get_batch(split):
+    """batch of data."""
 
-    # randint wants tuple -> (sequences_per_batch,)
-    random_pos = torch.randint(len(current_ds) - context_length, (sequences_per_batch,))
-    input_seq = torch.stack([current_ds[i : i + context_length] for i in random_pos])
-    # input [a,b,c,d], target [b,c,d,e]
-    target_seq = torch.stack(
-        [current_ds[i + 1 : i + context_length + 1] for i in random_pos]
+    data = train_data if split == "train" else val_data
+    random_indices = torch.randint(len(data) - context_length, (batch_size,))
+
+    inputs = torch.stack([data[i : i + context_length] for i in random_indices])
+
+    targets = torch.stack(
+        [data[i + 1 : i + context_length + 1] for i in random_indices]
     )
-    input_seq = input_seq.to(device)
-    target_seq = target_seq.to(device)
 
-    return input_seq, target_seq
+    inputs, targets = inputs.to(device), targets.to(device)
 
-
-# WORKS
-# x_input, y_target = training_batch(training_ds)
-# print("\n\n", "input:", x_input, "\n\n", "target:", y_target)
-# input: tensor([[14727, 10126,  5169,  ...,   307, 15492, 51055],
-#        [   76,  2357,    13,  ...,   297,  1543, 18757],
-#        [ 2357,   321,   344,  ..., 69560,    11, 13080],
-#        ...,
-#        [50291,  2357,  3900,  ...,  1295,   616, 94702],
-#        [ 1980, 25554, 56047,  ...,   380,  2357,  4415],
-#        [53756, 12778,   658,  ...,  6870,    11, 34065]])
-#
-# target: tensor([[10126,  5169,    11,  ..., 15492, 51055,   484],
-#        [ 2357,    13,   735,  ...,  1543, 18757,   383],
-#        [  321,   344, 14360,  ...,    11, 13080,   258],
-#        ...,
-#        [ 2357,  3900,    76,  ...,   616, 94702,    11],
-#        [25554, 56047,    13,  ...,  2357,  4415,   680],
-#        [12778,   658, 67997,  ...,    11, 34065,   664]])
+    return inputs, targets
 
 
-def loss():
-    results = {}
-    # dropout, normalization off
-    model.eval()
+# test batch generation
+# inputs, targets = get_batch("train")
+# print("inputs shapes:", inputs.shape)
+# print("targets:", targets.shape)
+# print("inputs:", inputs)
+# print("targets:", targets)
 
-    for ds in ["train", "val"]:
-        losses = torch.zeros(eval_iters)
-
-        for i in range(eval_iters):
-            x_input, y_target = training_batch(ds)
-            targets, loss = model(x_input, y_target)
-            losses[i] = loss.item()
-
-        results[ds] = losses.mean()
-    # normalization on
-    model.train()
-
-    return results
+# inputs: tensor([[16820,    11,  5568,  2357,   308, 16820,  1980, 99682],
+#         [12203, 60166,   597,  2319, 31824,  7643, 14635,   477],
+#         [   71, 15492, 51890, 16373, 14360,  2357, 93464, 22243],
+#         [ 1441,  2357,   267,  2357, 39004, 12949,    11, 73730]])
+# targets: tensor([[   11,  5568,  2357,   308, 16820,  1980, 99682,  1937],
+#         [60166,   597,  2319, 31824,  7643, 14635,   477,   300],
+#         [15492, 51890, 16373, 14360,  2357, 93464, 22243, 15492],
+#         [ 2357,   267,  2357, 39004, 12949,    11, 73730, 10248]])
 
 
-class Head(nn.Module):
-    """single self-attention head with causal masking"""
+class AttentionHead(nn.Module):
+    """self-attention head with causal masking."""
 
-    def __init__(self, size):
+    def __init__(self, head_size):
         super().__init__()
-        # projections
-        self.key = nn.Linear(n_embd, size, bias=False)
-        self.query = nn.Linear(n_embd, size, bias=False)
-        self.value = nn.Linear(n_embd, size, bias=False)
-
-        # prevent peeking
+        self.key = nn.Linear(embedding_dimension, head_size, bias=False)
+        self.query = nn.Linear(embedding_dimension, head_size, bias=False)
+        self.value = nn.Linear(embedding_dimension, head_size, bias=False)
         self.register_buffer(
             "causal_mask", torch.tril(torch.ones(context_length, context_length))
         )
+        self.dropout = nn.Dropout(dropout_rate)
 
-        # prevent overfitting
-        self.dropout = nn.Dropout(dropout)
+    def forward(self, x):
+        batch_size, seq_length, _ = x.shape
 
-    def process(self, x):
-        """process input
-
-        Args:
-            x (tensor): (B, T, C)
-
-        Returns:
-            tensor: tensor (B, T, head_size)
-        """
-        B, T, C = x.shape
-
+        # (batch_size, seq_length, head_size)
         k = self.key(x)
         q = self.query(x)
+        v = self.value(x)
 
-        # attention scores (dot product scaled by sqrt(dim))
-        scores = q @ k.transpose(-2, -1) * (C**-0.5)  # (B, T, T)
+        # attention scores
+        scores = q @ k.transpose(-2, -1) * (embedding_dimension**-0.5)
+        # apply causal mask
+        scores = scores.masked_fill(
+            self.causal_mask[:seq_length, :seq_length] == 0, float("-inf")
+        )
 
-        # apply  masking
-        mask = self.mask[:T, :T]
-        scores = scores.masked_fill(mask == 0, float("-inf"))
-
-        # probabilities and apply dropout
-        weights = F.softmax(scores, dim=-1)  # (B, T, T)
+        weights = F.softmax(scores, dim=-1)  # (batch_size, seq_length, seq_length)
         weights = self.dropout(weights)
 
         # weighted values
-        v = self.value(x)  # (B, T, head_size)
-        output = weights @ v  # (B, T, head_size)
-
+        output = weights @ v  # (batch_size, seq_length, head_size)
         return output
+
+
+dummy = torch.randn(batch_size, context_length, embedding_dimension)
+head = AttentionHead(head_size=16)
+output = head(dummy)
+print("attentionhead:", output.shape)
+print("attentionhead:", output)
 
 
 def main():
