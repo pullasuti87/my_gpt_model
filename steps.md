@@ -7,7 +7,7 @@
 5. define model
 6. train, run, check the results
 
-## claude 3.5 steps
+## claude steps
 
 - setup
 

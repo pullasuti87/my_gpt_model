@@ -51,19 +51,21 @@ def get_batch(split):
 
     data = train_data if split == "train" else val_data
     random_indices = torch.randint(len(data) - context_length, (batch_size,))
+    # print(random_indices)
 
     inputs = torch.stack([data[i : i + context_length] for i in random_indices])
+    # print(inputs)
 
     targets = torch.stack(
         [data[i + 1 : i + context_length + 1] for i in random_indices]
     )
+    # print(targets)
 
     inputs, targets = inputs.to(device), targets.to(device)
 
     return inputs, targets
 
 
-# test batch generation
 # inputs, targets = get_batch("train")
 # print("inputs shapes:", inputs.shape)
 # print("targets:", targets.shape)
@@ -80,8 +82,8 @@ def get_batch(split):
 #         [ 2357,   267,  2357, 39004, 12949,    11, 73730, 10248]])
 
 
-class AttentionHead(nn.Module):
-    """self-attention head with causal masking."""
+class Head(nn.Module):
+    """attentionhead"""
 
     def __init__(self, head_size):
         super().__init__()
@@ -100,9 +102,13 @@ class AttentionHead(nn.Module):
         k = self.key(x)
         q = self.query(x)
         v = self.value(x)
+        # print("k", k,q,v)
 
         # attention scores
-        scores = q @ k.transpose(-2, -1) * (embedding_dimension**-0.5)
+        scores = (
+            q @ k.transpose(-2, -1) * (embedding_dimension**-0.5)
+        )  # @ -> batch-wise matrix multiplication
+        # print(scores)
         # apply causal mask
         scores = scores.masked_fill(
             self.causal_mask[:seq_length, :seq_length] == 0, float("-inf")
@@ -117,10 +123,58 @@ class AttentionHead(nn.Module):
 
 
 dummy = torch.randn(batch_size, context_length, embedding_dimension)
-head = AttentionHead(head_size=16)
-output = head(dummy)
-print("attentionhead:", output.shape)
-print("attentionhead:", output)
+# head = Head(head_size=16)
+# output = head(dummy)
+# print("attentionhead:", output.shape)
+# print("attentionhead:", output)
+
+
+class MultiHead(nn.Module):
+    """attentionheads in parallel."""
+
+    def __init__(self, num_heads, head_size):
+        super().__init__()
+        self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
+        self.proj = nn.Linear(embedding_dimension, embedding_dimension)
+        self.dropout = nn.Dropout(dropout_rate)
+
+    def forward(self, x):
+        out = torch.cat([h(x) for h in self.heads], dim=-1)  # connect heads
+        # print(out)
+        out = self.dropout(self.proj(out))  # linear projection and dropout
+        # print(out)
+        return out
+
+
+# mh = MultiHead(
+#     num_heads=n_attention_heads, head_size=embedding_dimension // n_attention_heads
+# )
+# output = mh(dummy)
+# print("multihead.shape", output.shape)
+# print("multihead", output)
+
+
+class FF(nn.Module):
+    """position-wise ffn, feedforward_network"""
+
+    def __init__(self, embedding_dim):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(embedding_dim, 4 * embedding_dim),
+            nn.ReLU(),
+            nn.Linear(4 * embedding_dim, embedding_dim),
+            nn.Dropout(dropout_rate),
+        )
+
+    def forward(self, x):
+        print(self.net(x))
+        return self.net(x)
+
+
+# ff = FF(embedding_dimension)
+# output = ff(dummy)
+# print("feedforward:", output.shape)
+# print("ff", output)
 
 
 def main():
