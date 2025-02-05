@@ -167,7 +167,7 @@ class FF(nn.Module):
         )
 
     def forward(self, x):
-        print(self.net(x))
+        # print(self.net(x))
         return self.net(x)
 
 
@@ -176,6 +176,28 @@ class FF(nn.Module):
 # print("feedforward:", output.shape)
 # print("ff", output)
 
+class Block(nn.Module):
+    """ communication computation """
+
+    def __init__(self, num_embd, num_head):
+        super().__init__()
+        head_size = num_embd // num_head
+        self.sa = MultiHead(num_head, head_size)
+        self.ffwd = FF(num_embd)
+        self.ln1 = nn.LayerNorm(num_embd)
+        self.ln2 = nn.LayerNorm(num_embd)
+
+    def forward(self, x):
+        # residual connection -> gradient flow
+        x = x + self.sa(self.ln1(x))
+        # training stability
+        x = x + self.ffwd(self.ln2(x))
+        return x
+
+block = Block(embedding_dimension, n_attention_heads)
+output = block(dummy)
+print("block:", output)
+print("block_shape", output.shape)
 
 def main():
     pass
