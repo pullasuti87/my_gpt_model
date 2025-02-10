@@ -1,3 +1,11 @@
+"""
+todo:
+loss func missing
+class gptmodel no ready
+-> init weights forward return
+"""
+
+
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -6,14 +14,14 @@ import tiktoken
 # tokenizer -> https://github.com/google/sentencepiece
 # import sentencepiece as sp
 
-# configuration
+# config
 batch_size = 4  # seq processed in parallel
 context_length = 8  # max length of predictions
 max_training_steps = 5000
 evaluation_frequency = 500
 evaluation_iterations = 100  # iterations for evaluation metrics
 learning_rate = 3e-4  # Adam optimizer
-device = "cpu"  # "cuda" if available
+# device = "cpu"  # "cuda" if available
 
 # hyperparameters
 embedding_dimension = 128  # dimensionality of token embeddings
@@ -36,6 +44,9 @@ test_string = "test"
 encoded = enc.encode(test_string)
 decoded = enc.decode(encoded)
 assert test_string == decoded, "tokenizer test failed"
+
+# vocabulary size
+vocab_size = enc.n_vocab
 
 # dataset to tensor
 tensor_data = torch.tensor(enc.encode(dataset))
@@ -176,8 +187,9 @@ class FF(nn.Module):
 # print("feedforward:", output.shape)
 # print("ff", output)
 
+
 class Block(nn.Module):
-    """ communication computation """
+    """communication computation"""
 
     def __init__(self, num_embd, num_head):
         super().__init__()
@@ -194,14 +206,55 @@ class Block(nn.Module):
         x = x + self.ffwd(self.ln2(x))
         return x
 
-block = Block(embedding_dimension, n_attention_heads)
-output = block(dummy)
-print("block:", output)
-print("block_shape", output.shape)
+
+# block = Block(embedding_dimension, n_attention_heads)
+# output = block(dummy)
+# print("block:", output)
+# print("block_shape", output.shape)
+
+# batch_size = 4  # seq processed in parallel
+# context_length = 8  # max length of predictions
+# max_training_steps = 5000
+# evaluation_frequency = 500
+# evaluation_iterations = 100  # iterations for evaluation metrics
+# learning_rate = 3e-4  # Adam optimizer
+# device = "cpu"  # "cuda" if available
+#
+# embedding_dimension = 128  # dimensionality of token embeddings
+# n_attention_heads = 8  # n of attention heads
+# n_transformer_layers = 6  # n of layers
+# dropout_rate = 0.1  # rate for regularization -> 0.0 no dropout
+
+
+class GPTModel(nn.Module):
+    """main class"""
+
+    def __init__(self):
+        super().__init__()
+        self.token_embedding_table = nn.Embedding(vocab_size, embedding_dimension)
+        self.position_embedding_table = nn.Embedding(
+            context_length, embedding_dimension
+        )
+        self.blocks = nn.Sequential(
+            *[
+                Block(embedding_dimension, n_attention_heads)
+                for _ in range(n_transformer_layers)
+            ]
+        )
+        self.ln_f = nn.LayerNorm(embedding_dimension)
+        self.lm_head = nn.Linear(embedding_dimension, vocab_size)
+
+        # weights
+        self.apply(self._init_weights)
+
+#    def _init_weights(self, module):
+
 
 def main():
-    pass
+    # init
+    model = GPTModel().to("cpu")
 
+# TODO: loss func
 
 if __name__ == "__main__":
     main()
