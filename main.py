@@ -21,7 +21,6 @@ evaluation_frequency = 500
 evaluation_iterations = 100  # iterations for evaluation metrics
 learning_rate = 3e-4  # sweet spot for Adam optimizer
 # device = "cpu"  # "cuda" if available
-smoothing = 0.1
 
 # hyperparameters
 embedding_dimension = 128  # dimensionality of token embeddings
