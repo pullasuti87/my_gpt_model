@@ -5,7 +5,6 @@ class gptmodel no ready
 -> init weights forward return
 """
 
-
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -15,13 +14,14 @@ import tiktoken
 # import sentencepiece as sp
 
 # config
-batch_size = 4  # seq processed in parallel
-context_length = 8  # max length of predictions
+batch_size = 8  # seq processed in parallel
+context_length = 32  # max length of predictions
 max_training_steps = 5000
 evaluation_frequency = 500
 evaluation_iterations = 100  # iterations for evaluation metrics
-learning_rate = 3e-4  # Adam optimizer
+learning_rate = 3e-4  # sweet spot for Adam optimizer
 # device = "cpu"  # "cuda" if available
+smoothing = 0.1
 
 # hyperparameters
 embedding_dimension = 128  # dimensionality of token embeddings
@@ -93,6 +93,11 @@ def get_batch(split):
 #         [ 2357,   267,  2357, 39004, 12949,    11, 73730, 10248]])
 
 
+def estimate_loss(logits, targets):
+    """ """
+    pass
+
+
 class Head(nn.Module):
     """attentionhead"""
 
@@ -141,7 +146,7 @@ dummy = torch.randn(batch_size, context_length, embedding_dimension)
 
 
 class MultiHead(nn.Module):
-    """attentionheads in parallel."""
+    """attentionheads in parallel"""
 
     def __init__(self, num_heads, head_size):
         super().__init__()
@@ -244,17 +249,39 @@ class GPTModel(nn.Module):
         self.ln_f = nn.LayerNorm(embedding_dimension)
         self.lm_head = nn.Linear(embedding_dimension, vocab_size)
 
-        # weights
-        self.apply(self._init_weights)
+    def forward(self, idx, targets=None):
+        B, T = idx.shape
 
-#    def _init_weights(self, module):
+        # token and position embeddings
+        tok_emb = self.token_embedding_table(idx)  # (B,T,C)
+        pos_emb = self.position_embedding_table(
+            torch.arange(T, device=idx.device)
+        )  # (T,C)
+        x = tok_emb + pos_emb  # (B,T,C)
+
+        # transformer blocks
+        x = self.blocks(x)  # (B,T,C)
+        x = self.ln_f(x)  # (B,T,C)
+
+        # head
+        logits = self.lm_head(x)  # (B,T,vocab_size)
+
+        # calculate loss
+        if targets is None:
+            loss_val = None
+        else:
+            B, T, C = logits.shape
+            logits = logits.view(B * T, C)
+            targets = targets.view(B * T)
+            loss_val = F.cross_entropy(logits, targets)
+
+        return logits, loss_val
 
 
 def main():
     # init
     model = GPTModel().to("cpu")
-
-# TODO: loss func
+    print(model)
 
 if __name__ == "__main__":
     main()
